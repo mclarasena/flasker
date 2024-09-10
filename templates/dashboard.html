@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+{% for message in get_flashed_messages() %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+{% endfor %}
+
+<h2>Dashboard</h2>
+<br/>
+
+<div class="card">
+    <div class="card-header">
+        {{ current_user.name }}
+    </div>
+    <div class="card-body">
+        <div class="container">
+            <div class="row">
+                <div class="col-8">
+                    <br/><br/>
+                    <strong>Nome: </strong>{{ current_user.name }}<br/>
+                    <strong>Username: </strong>{{ current_user.username }}<br/>
+                    <strong>Id do usuário: </strong>{{ current_user.id }}<br/>
+                    <strong>Email: </strong>{{ current_user.email }}<br/>
+                    <strong>Sobre o autor: </strong>{{ current_user.about_author }}<br/>
+                    <strong>Foto de perfil: </strong>{{ current_user.profile_pic}}<br/>
+                    <strong>Data de entrada: </strong>{{ current_user.data_added}}<br/>
+
+                    <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-sm">Logout</a>
+                    <a href="{{ url_for('update', id=current_user.id) }}" class="btn btn-secondary btn-sm">Atualizar perfil</a>
+                    <a href="{{ url_for('delete', id=current_user.id) }}" class="btn btn-danger btn-sm">Deletar</a>
+                </div>
+                <div class="col-4">
+                    <img src="{{ url_for('static', filename='images/receitas.png') }}" width="150" align="right">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        Atualizar Perfil
+    </div>
+    <div class="card-body">
+        <form action="{{ url_for('dashboard', id=name_to_update.id) }}" method="POST" enctype="multipart/form-data">
+            {{ form.hidden_tag() }}
+
+            {{ form.name.label(class="form-label") }}
+            {{ form.name(class="form-control", value=name_to_update.name) }}
+            <br/>
+
+            {{ form.username.label(class="form-label") }}
+            {{ form.username(class="form-control", value=name_to_update.username) }}
+            <br/>
+
+            {{ form.email.label(class="form-label") }}
+            {{ form.email(class="form-control", value=name_to_update.email) }}
+            <br/>
+
+            {{ form.about_author.label(class="form-label") }}
+            {{ form.about_author(class="form-control") }}
+            <br/>
+
+            {{ form.profile_pic.label(class="form-label") }}
+            {{ form.profile_pic(class="form-control") }}
+            <br/>
+
+            {{ form.submit(class="btn btn-dark btn-sm") }}
+        </form>
+    </div>
+</div>
+
+{% endblock %}

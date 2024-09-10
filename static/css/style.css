@@ -1,0 +1,23 @@
+h1 {
+    color: dark;
+    font-size: 60px;
+}
+
+body {
+    background-color: rgb(255, 255, 255);
+}
+
+#demo {
+    font-size: 12px;
+    
+}
+
+.post-link {
+    display: block;
+    text-decoration: none; /* Remove underline from the link */
+    color: inherit; /* Inherit text color */
+}
+
+.post-link .shadow {
+    cursor: pointer; /* Change cursor to pointer to indicate it is clickable */
+}
