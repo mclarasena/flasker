@@ -11,6 +11,7 @@ from flask_ckeditor import CKEditor
 from werkzeug.utils import secure_filename
 import uuid as uuid 
 import os 
+from flask import abort
 
 
 #Instância do Flask
@@ -47,6 +48,29 @@ def load_user(user_id):
 def base():
     form= SearchForm()
     return dict(form=form)
+
+'''@app.route("/new_recipe", methods=["GET", "POST"])
+@login_required
+def new_recipe():
+    if not current_user.is_admin: #apenas o admin pode criar receitas
+        abort(403)  #erro de acesso proibido
+
+    form= RecipeForm()
+    if form.validate_on_submit():
+        recipe = Recipe(
+            title=form.title.data,
+            ingredients=form.ingredients.data,
+            instructions=form.instructions.data,
+            cooking_time=form.cooking_time.data,
+            author=form.author.data
+
+        )
+        db.session.add(recipe)
+        db.commit()
+        flash('Receita adicionada com sucesso!', 'success')
+        return redirect(url_for('posts'))
+    
+    return render_template('create_recipe.html')'''
 
 #Página do administrador 
 @app.route('/admin')
@@ -108,55 +132,58 @@ def logout():
 @app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
 def dashboard():
-    form=UserForm()
+    form = UserForm()
     id = current_user.id
-    name_to_update=Users.query.get_or_404(id)
+    name_to_update = Users.query.get_or_404(id)
+
     if request.method == "POST":
-        name_to_update.name= request.form['name']
-        name_to_update.email= request.form['email']
-        name_to_update.username= request.form['username']
-        name_to_update.about_author= request.form['about_author']
-        name_to_update.profile_pic= request.files['profile_pic']
-        #Pegar o nome da imagem
-        pic_filename = secure_filename(name_to_update.profile_pic.filename)
-        #Set UUID
-        pic_name = str(uuid.uuid1()) + "_" + pic_filename
-        #Salvar imagem 
-        saver = request.files['profile_pic']
-    
-        #Mudar para string para salvar no banco de dados
-        name_to_update.profile_pic = pic_name
-       
+        # Atualizar os campos de texto
+        name_to_update.name = request.form['name']
+        name_to_update.email = request.form['email']
+        name_to_update.username = request.form['username']
+        name_to_update.about_author = request.form['about_author']
+
+        # Verificar se uma nova foto de perfil foi enviada
+        if request.files['profile_pic']:
+            profile_pic = request.files['profile_pic']
+
+            # Verificar se o arquivo é permitido (ex: .png, .jpg)
+            if profile_pic.filename != '':
+                pic_filename = secure_filename(profile_pic.filename)
+                pic_name = str(uuid.uuid1()) + "_" + pic_filename
+                name_to_update.profile_pic = pic_name  # Salvar o nome da imagem no banco de dados
+
+                # Salvar a imagem no diretório de uploads
+                try:
+                    profile_pic.save(os.path.join(app.config['UPLOAD_FOLDER'], pic_name))
+                except Exception as e:
+                    flash(f"Erro ao salvar a imagem: {str(e)}")
+                    return render_template("dashboard.html", form=form, name_to_update=name_to_update)
+
+        # Tentar salvar as mudanças no banco de dados
         try:
             db.session.commit()
-            saver.save(os.path.join(app.config['UPLOAD_FOLDER'], pic_name))
             flash("Dados do usuário atualizados com sucesso!")
-            return render_template("dashboard.html",
-                                   form=form,
-                                   name_to_update=name_to_update)
-        except:
-            flash("Erro... Tente de novo")
-            return render_template("dashboard.html",
-                                   form=form,
-                                   name_to_update=name_to_update)
-    else: 
-        return render_template("dashboard.html",
-                                   form=form,
-                                   name_to_update=name_to_update,
-                                   id = id)
-    
-    return render_template('dashboard.html')
+            return redirect(url_for('dashboard'))  # Redirecionar para a página do dashboard
+        except Exception as e:
+            db.session.rollback()  # Desfazer as mudanças se houver erro
+            flash(f"Erro ao atualizar os dados: {str(e)}")
+            return render_template("dashboard.html", form=form, name_to_update=name_to_update)
+
+    # Renderizar o template para o método GET
+    return render_template("dashboard.html", form=form, name_to_update=name_to_update)
 
 @app.route('/posts/delete/<int:id>')
 def delete_post(id):
     post_to_delete = Posts.query.get_or_404(id)
+    id = current_user.id
 
     if post_to_delete.poster is None:
         flash('O post não tem um autor associado. Não é possível deletar.')
         return redirect(url_for('posts'))
 
     # Verifica se o usuário atual é o dono do post
-    if current_user.id == post_to_delete.poster.id:
+    if id == post_to_delete.poster.id or id == 9:
         try:
             db.session.delete(post_to_delete)
             db.session.commit()
@@ -199,7 +226,7 @@ def edit_post(id):
         flash('Post atualizado!')
         return redirect(url_for('post', id=post.id))
     
-    if current_user.id == post.poster_id:
+    if current_user.id == post.poster_id or current_user.id == 9:
         form.title.data= post.title
         #form.author.data= post.author
         form.slug.data= post.slug
@@ -413,7 +440,13 @@ class Users(db.Model, UserMixin):
     #usuarios podem ter varios pots
     posts = db.relationship('Posts', backref='poster')
 
-    
+    #recipes= db.relationship('Recipe', backref='author', lazy=True)
+
+    is_admin = db.Column(db.Boolean, default= False)
+
+    def is_admin(self):
+        return self.is_admin
+
     @property
     def password(self):
         raise AttributeError('password is not a readable atribute')
@@ -428,6 +461,18 @@ class Users(db.Model, UserMixin):
     #Criar uma string
     def __repr__(self):
         return '<Name %r>' % self.name
+
+
+#class Recipe(db.Model):
+    #id = db.Column(db.Integer, primary_key=True)
+    #title = db.Column(db.String(100), nullable=False)
+    #ingredients = db.Column(db.Text, nullable=False)
+    #instructions = db.Column(db.Text, nullable=False)
+    #cooking_time = db.Column(db.Integer, nullable=False)
+    #date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    #user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+
 
 
 if __name__ == "__main__":

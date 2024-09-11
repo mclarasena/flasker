@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, PasswordField, BooleanField, ValidationError, TextAreaField
+from wtforms import StringField, SubmitField, PasswordField, BooleanField, ValidationError, TextAreaField, IntegerField
 from wtforms.validators import DataRequired, EqualTo, Length
 from wtforms.widgets import TextArea
 from flask_ckeditor import CKEditorField
@@ -48,3 +48,9 @@ class PasswordForm(FlaskForm):
     password_hash = PasswordField('Senha', validators=[DataRequired()])
     submit = SubmitField('Enviar')
 
+'''class RecipeForm(FlaskForm):
+    title= StringField('Título', validators=[DataRequired()])
+    ingredients= TextAreaField('Ingredientes', validators=[DataRequired()])
+    instructions= TextAreaField('Instruções', validators=[DataRequired()])
+    cooking_time= IntegerField('Tempo de Preparo (min)', validators=[DataRequired()])
+    submit= SubmitField('Criar Receita')'''
